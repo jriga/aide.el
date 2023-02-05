@@ -33,17 +33,17 @@
   :group 'external
   :prefix "aide-")
 
-(defcustom aide-ai-model "text-davinci-002"
+(defcustom aide-ai-model "code-davinci-002"
   "The model paramater that aide.el sends to OpenAI API."
   :type 'string
   :group 'aide)
 
-(defcustom aide-max-input-tokens 3800
+(defcustom aide-max-input-tokens 7600
   "The maximum number of tokens that aide.el sends to OpenAI API"
   :type 'integer
   :group 'aide)
 
-(defcustom aide-max-output-tokens 100
+(defcustom aide-max-output-tokens 200
   "The max-tokens paramater that aide.el sends to OpenAI API."
   :type 'integer
   :group 'aide)
@@ -70,83 +70,80 @@
 
 (defcustom aide-completions-model "davinci"
   "Name of the model used for completions. aide sends requests to
-the OpenAI API endpoint of this model."
+   the OpenAI API endpoint of this model."
   :type 'string
   :group 'aide
-  :options '("davinci", "text-davinci-002", "text-curie-001", "text-babbage-001", "text-ada-001"))
+  :options '("davinci", "code-davinci-002", "code-cushman-001", "text-davinci-002", "text-curie-001", "text-babbage-001", "text-ada-001"))
 
 (defun aide-openai-complete (api-key prompt)
   "Return the prompt answer from OpenAI API.
-API-KEY is the OpenAI API key.
-
-PROMPT is the prompt string we send to the API."
+   API-KEY is the OpenAI API key.
+   PROMPT is the prompt string we send to the API."
   (let ((result nil)
-        (auth-value (format "Bearer %s" api-key)))
+	(auth-value (format "Bearer %s" api-key)))
     (request
       "https://api.openai.com/v1/completions"
       :type "POST"
       :data (json-encode `(("prompt" . ,prompt)
-                           ("model"  . ,aide-ai-model)
-                           ("max_tokens" . ,aide-max-output-tokens)
-                           ("temperature" . ,aide-temperature)
-                           ("frequency_penalty" . ,aide-frequency-penalty)
-                           ("presence_penalty" . ,aide-presence-penalty)
-                           ("top_p" . ,aide-top-p)))
+			   ("model"  . ,aide-ai-model)
+			   ("max_tokens" . ,aide-max-output-tokens)
+			   ("temperature" . ,aide-temperature)
+			   ("frequency_penalty" . ,aide-frequency-penalty)
+			   ("presence_penalty" . ,aide-presence-penalty)
+			   ("top_p" . ,aide-top-p)))
       :headers `(("Authorization" . ,auth-value) ("Content-Type" . "application/json"))
       :sync t
       :parser 'json-read
       :success (cl-function
-                (lambda (&key data &allow-other-keys)
-                  (setq result (alist-get 'text (elt (alist-get 'choices data) 0)))))
+		(lambda (&key data &allow-other-keys)
+		  (setq result (alist-get 'text (elt (alist-get 'choices data) 0)))))
       :error (cl-function (lambda (&rest args &key error-thrown &allow-other-keys)
-                 (message "Got error: %S" error-thrown))))
+		 (message "Got error: %S" error-thrown))))
       result))
 
 (defun aide-openai-complete-region (start end)
   "Send the region to OpenAI autocomplete engine and get the result.
-
-START and END are selected region boundaries."
-  (interactive "r")
-  (let* ((region (buffer-substring-no-properties start end))
-         (result (aide--openai-complete-string region)))
-    (message "%s" result)))
+   START and END are selected region boundaries."
+       (interactive "r")
+       (let* ((region (buffer-substring-no-properties start end))
+	      (result (aide--openai-complete-string region)))
+	 (message "%s" result)))
 
 (defun aide-openai-complete-region-insert (start end)
   "Send the region to OpenAI and insert the result to the end of buffer.
-
-START and END are selected region boundaries."
+   START and END are selected region boundaries."
   (interactive "r")
   (let* ((region (buffer-substring-no-properties start end))
-         (result (aide--openai-complete-string region))
-        original-point)
+	 (result (aide--openai-complete-string region))
+	original-point)
     (goto-char (point-max))
     (setq original-point (point))
     (if result
-        (progn
-          (insert "\n" result)
-          (fill-paragraph)
-          (let ((x (make-overlay original-point (point-max))))
-            (overlay-put x 'face '(:foreground "orange red")))
-          result)
+	(progn
+	  (insert "\n" result)
+	  (fill-paragraph)
+	  (let ((x (make-overlay original-point (point-max))))
+	    (overlay-put x 'face '(:foreground "orange red")))
+	  result)
       (message "Empty result"))))
 
 (defun aide-openai-complete-buffer-insert ()
   "Send the ENTIRE buffer, up to max tokens, to OpenAI and insert the result to the end of buffer."
   (interactive)
   (let (region
-        result
-        original-point)
+	result
+	original-point)
     (setq region (buffer-substring-no-properties (get-min-point) (point-max)))
     (setq result (aide--openai-complete-string region))
     (goto-char (point-max))
     (setq original-point (point))
     (if result
-        (progn
-          (insert "\n" result)
-          (fill-paragraph)
-          (let ((x (make-overlay original-point (point-max))))
-            (overlay-put x 'face '(:foreground "orange red")))
-          result)
+	(progn
+	  (insert "\n" result)
+	  (fill-paragraph)
+	  (let ((x (make-overlay original-point (point-max))))
+	    (overlay-put x 'face '(:foreground "orange red")))
+	  result)
       (message "Empty result"))))
 
 (defun aide-openai-tldr-region (start end)
@@ -155,66 +152,62 @@ START and END are selected region boundaries."
 START and END are selected region boundaries."
   (interactive "r")
   (let* ((region (buffer-substring-no-properties start end))
-         (result (aide--openai-complete-string (concat region "\n\n tl;dr:"))))
+	 (result (aide--openai-complete-string (concat region "\n\n tl;dr:"))))
     (message "%s" result)))
 
 (defun aide-openai-edits (api-key instruction input)
   "Return the edits answer from OpenAI API.
-API-KEY is the OpenAI API key.
-
-INSTRUCTION and INPUT are the two params we send to the API."
+   API-KEY is the OpenAI API key.
+   INSTRUCTION and INPUT are the two params we send to the API."
   (let ((result nil)
-        (auth-value (format "Bearer %s" api-key)))
+	(auth-value (format "Bearer %s" api-key)))
     (request
       "https://api.openai.com/v1/engines/text-davinci-edit-001/edits"
       :type "POST"
       :data (json-encode `(("input" . ,input)
-                           ("instruction" . ,instruction)
-                           ("temperature" . 0.9)))
+			   ("instruction" . ,instruction)
+			   ("temperature" . 0.9)))
       :headers `(("Authorization" . ,auth-value)
-                 ("Content-Type" . "application/json"))
+		 ("Content-Type" . "application/json"))
       :sync t
       :parser 'json-read
       :success (cl-function
-                (lambda (&key data &allow-other-keys)
-                  (setq result (alist-get 'text (elt (alist-get 'choices data) 0))))))
+		(lambda (&key data &allow-other-keys)
+		  (setq result (alist-get 'text (elt (alist-get 'choices data) 0))))))
     result))
 
 (defun aide-openai-edits-region-insert (start end)
   "Send the region to OpenAI edits and insert the result to the end of region.
-
-START and END are selected region boundaries."
+   START and END are selected region boundaries."
   (interactive "r")
   (let* ((region (buffer-substring-no-properties start end))
-         (result (aide-openai-edits openai-api-key "Rephrase the text" region)))
+	 (result (aide-openai-edits openai-api-key "Rephrase the text" region)))
     (goto-char end)
     (if result
-        (progn
-          (insert "\n" result)
-          (fill-paragraph)
-          (let ((x (make-overlay end (point))))
-            (overlay-put x 'face '(:foreground "orange red")))
-          result)
+	(progn
+	  (insert "\n" result)
+	  (fill-paragraph)
+	  (let ((x (make-overlay end (point))))
+	    (overlay-put x 'face '(:foreground "orange red")))
+	  result)
       (message "Empty result"))))
 
 (defun aide-openai-edits-region-replace (start end)
   "Send the region to OpenAI edits and replace the region.
-
-START and END are selected region boundaries.
-
-The original content will be stored in the kill ring."
+   START and END are selected region boundaries.
+   The original content will be stored in the kill ring."
   (interactive "r")
   (let* ((region (buffer-substring-no-properties start end))
-         (result (aide-openai-edits openai-api-key "Rephrase the text" region)))
+	 (result (aide-openai-edits openai-api-key "Rephrase the text" region)))
     (goto-char end)
     (if result
-        (progn
-          (kill-region start end)
-          (insert "\n" result)
-          (fill-paragraph)
-          (let ((x (make-overlay end (point))))
-            (overlay-put x 'face '(:foreground "orange red")))
-          result)
+	(progn
+	  (kill-region start end)
+	  (insert "\n" result)
+	  (fill-paragraph)
+	  (let ((x (make-overlay end (point))))
+	    (overlay-put x 'face '(:foreground "orange red")))
+	  result)
       (message "Empty result"))))
 
 ;; private
@@ -224,7 +217,7 @@ The original content will be stored in the kill ring."
 
 (defun get-min-point ()
   "OpenAI API limits requests of > ~4000 tokens (model-specific; davinci
-maxes out at request of 4000 tokens; ~15200 char"
+   maxes out at request of 4000 tokens; ~15200 char"
   (if (> (buffer-size) (* 4 (or aide-max-input-tokens 3800))) ;; 1 tokens = ~4 char
       (- (point-max) (* 4 (or aide-max-input-tokens 3800)))
     (point-min)))
