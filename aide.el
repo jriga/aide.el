@@ -33,17 +33,12 @@
   :group 'external
   :prefix "aide-")
 
-(defcustom aide-ai-model "code-davinci-002"
-  "The model paramater that aide.el sends to OpenAI API."
-  :type 'string
-  :group 'aide)
-
-(defcustom aide-max-input-tokens 7600
+(defcustom aide-max-input-tokens 3800
   "The maximum number of tokens that aide.el sends to OpenAI API"
   :type 'integer
   :group 'aide)
 
-(defcustom aide-max-output-tokens 200
+(defcustom aide-max-output-tokens 100
   "The max-tokens paramater that aide.el sends to OpenAI API."
   :type 'integer
   :group 'aide)
@@ -68,12 +63,12 @@
   :type 'float
   :group 'aide)
 
-(defcustom aide-completions-model "davinci"
+(defcustom aide-completions-model "text-davinci-003"
   "Name of the model used for completions. aide sends requests to
    the OpenAI API endpoint of this model."
   :type 'string
   :group 'aide
-  :options '("davinci", "code-davinci-002", "code-cushman-001", "text-davinci-002", "text-curie-001", "text-babbage-001", "text-ada-001"))
+  :options '("text-davinci-003", "text-curie-001", "text-babbage-001", "text-ada-001", "code-davinci-002", "code-cushman-001"))
 
 (defun aide-openai-complete (api-key prompt)
   "Return the prompt answer from OpenAI API.
@@ -85,7 +80,7 @@
       "https://api.openai.com/v1/completions"
       :type "POST"
       :data (json-encode `(("prompt" . ,prompt)
-			   ("model"  . ,aide-ai-model)
+			   ("model"  . ,aide-completions-model)
 			   ("max_tokens" . ,aide-max-output-tokens)
 			   ("temperature" . ,aide-temperature)
 			   ("frequency_penalty" . ,aide-frequency-penalty)
